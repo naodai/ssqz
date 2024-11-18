@@ -1,0 +1,13 @@
+{
+    "name": "naodai/ssqz",
+    "description": "ssqz公共基础",
+    "type": "library",
+    "authors": [
+        {
+            "name": "naodai",
+            "email": "zhao_brain@163.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
