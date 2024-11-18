@@ -22,7 +22,7 @@ class UserToken extends \yii\db\ActiveRecord
         $client = Yii::$app->request->get('client');
         switch ($client) {
             case "pc":
-                $tokenModel = UserPcToken::findOne(['id' => $userId]);
+                $tokenModel = UserPcToken::findOne(['user_id' => $userId]);
                 break;
             default:
                 break;
