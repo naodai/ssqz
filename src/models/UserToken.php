@@ -34,12 +34,12 @@ class UserToken extends \yii\db\ActiveRecord
             return false;
         }
         $time = time();
-        if ($time - $tokenModel->created_at > 2 * 24 * 60 * 60) {
+        if ($time - $tokenModel->updated_at > 2 * 24 * 60 * 60) {
             return false;
         }
         //更新
         if ($refresh) {
-            if ($time - $tokenModel->created_at > 3 * 60 * 60) {
+            if ($time - $tokenModel->updated_at > 3 * 60 * 60) {
                 self::generateToken();
             }
         }
@@ -53,7 +53,7 @@ class UserToken extends \yii\db\ActiveRecord
         $client = Yii::$app->request->get('client');
         switch ($client) {
             case "pc":
-                $tokenModel = UserPcToken::findOne(['id' => $userId]);
+                $tokenModel = UserPcToken::findOne(['user_id' => $userId]);
                 break;
                 default:
                     break;
