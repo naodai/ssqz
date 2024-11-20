@@ -3,104 +3,155 @@
 namespace ssqz\models;
 
 use Yii;
+use yii\base\Exception;
+use yii\filters\auth\HttpBearerAuth;
+use yii\web\UnauthorizedHttpException;
 
 class UserToken extends \yii\db\ActiveRecord
 {
+    //设置连接符
+    static private $_needle = '_';
 
-    public static function validateToken($token, $refresh = false)
+    //设置AES秘钥
+    private static $aes_key = 'bUYJ3nTV6VBasdJF'; //此处填写前后端共同约定的秘钥
+
+    /**
+     * @param $token
+     * @param $refresh
+     * @return false|mixed
+     * @throws \yii\base\Exception
+     */
+    public static function validateToken($token, $refresh = true)
     {
         $tokens = UserToken::getTokenInfo($token);
 
         if (!$tokens) {
+            Yii::info("Error Tokens:" . $tokens, __METHOD__);
             return false;
         }
         $userId = $tokens['userId'];
-        if(!$userId) {
+        if (!$userId) {
+            Yii::warning("Error UserId:" . $userId, __METHOD__);
             return false;
         }
         $tokenModel = null;
         $client = Yii::$app->request->get('client');
         switch ($client) {
             case "pc":
-                $tokenModel = UserPcToken::findOne(['user_id' => $userId]);
+                $tokenModel = UserPcToken::findOneByUserId($userId);
                 break;
             default:
-                break;
+                Yii::warning("Error Client:" . $client, __METHOD__);
+                return false;
         }
         if (!$tokenModel) {
+            Yii::warning("Error TokenModel:" . $tokenModel, __METHOD__);
             return false;
         }
         if ($tokenModel->token != $token) {
+            Yii::warning("Error Token:" . $tokenModel->token, __METHOD__);
             return false;
         }
         $time = time();
-        if ($time - $tokenModel->updated_at > 2 * 24 * 60 * 60) {
+        $timeCha = $time - $tokenModel->updated_at;
+        var_dump($time);
+        var_dump($timeCha);
+        if ($timeCha > 2 * 24 * 60 * 60) {
+            Yii::warning("Error Time99:" . $time." ".$tokenModel->updated_at." ".$timeCha, __METHOD__);
+
+            //throw new Exception("Token Expired",403);
             return false;
         }
         //更新
-        if ($refresh) {
-            if ($time - $tokenModel->updated_at > 3 * 60 * 60) {
+        if ($refresh !== false) {
+            Yii::info("Refresh Token UserId:".$userId, __METHOD__);
+//            if ($timeCha > 3 * 60 * 60) {
+                Yii::info($userId, __METHOD__);
                 self::generateToken();
-            }
+//            }
         }
         return $userId;
     }
 
+    /**
+     * @return false|mixed
+     * @throws \yii\base\Exception
+     */
     public static function generateToken()
     {
         $userId = Yii::$app->user->id;
-        $tokenModel = null;
+        $token = self::generateTokenPrefix($userId) . self::$_needle . Yii::$app->security->generateRandomString();
         $client = Yii::$app->request->get('client');
+        $result = false;
         switch ($client) {
             case "pc":
-                $tokenModel = UserPcToken::findOne(['user_id' => $userId]);
+                $result = UserPcToken::createUpdateToken($userId,$token);
                 break;
-                default:
-                    break;
+            default:
+                Yii::info("Error Client:" . $client, __METHOD__);
+                return false;
         }
-        if (!$tokenModel) {
-            $tokenModel = new UserPcToken();
-            $tokenModel->user_id = $userId;
-        }
-        $tokenModel->token = UserToken::generateTokenPrefix($userId) . "_" . Yii::$app->security->generateRandomString();
-        if (!$tokenModel->save()) {
-            var_dump($tokenModel->getErrors());
-            exit;
-        }
-        $headers = Yii::$app->response->headers;
-
-        // 增加一个 Pragma 头，已存在的Pragma 头不会被覆盖。
-        $headers->add('token', $tokenModel->token);
-        return $tokenModel->token;
-    }
-
-    public static function getTokenInfo($token)
-    {
-        if (strpos($token, '_') === false) {
+        if (!$result) {
             return false;
         }
-        $num = strpos($token, '_');
-//        echo $num;
-//        echo "\r\n";
-        $userId = substr($token, 0, $num);
-        $userId = self::decrypt($userId);
+
+        $headers = Yii::$app->response->headers;
+        // 增加一个 Token 头，已存在的头不会被覆盖。
+        $headers->add('Token', $result);
+        return $result;
+    }
+
+    /**
+     * @return false|string
+     */
+    public static function getHeaderToken()
+    {
+        $auth = new HttpBearerAuth();
+        $authHeader = Yii::$app->request->getHeaders()->get($auth->header);
+        if (preg_match($auth->pattern, $authHeader, $matches)) {
+            $authHeader = $matches[1];
+            return $authHeader;
+        }
+        return false;
+    }
+
+    /**
+     * @param $token
+     * @return array|false
+     */
+    public static function getTokenInfo($token)
+    {
+        if (strpos($token, self::$_needle) === false) {
+            Yii::warning("Error Token ".self::$_needle.":" . $token, __METHOD__);
+            return false;
+        }
+        $num = strpos($token, self::$_needle);
+        $userIdEncrypt = substr($token, 0, $num);
+        $userId = self::getDecrypt($userIdEncrypt);
         $token = substr($token, $num + 1);
-//        echo $userId;
-//        echo "\r\n";
-//        echo $token;
         return [
             'userId' => $userId,
             'token' => $token
         ];
     }
 
+    /**
+     * @param $userId
+     * @return bool|string
+     */
     public static function generateTokenPrefix($userId)
     {
         return self::encrypt($userId);
     }
 
-    //设置AES秘钥
-    private static $aes_key = 'bUYJ3nTV6VBasdJF'; //此处填写前后端共同约定的秘钥
+    /**
+     * @param $encrypt
+     * @return string
+     */
+    public static function getDecrypt($encrypt)
+    {
+        return self::decrypt($encrypt);
+    }
 
     /**
      * 加密

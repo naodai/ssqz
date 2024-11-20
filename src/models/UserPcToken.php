@@ -4,6 +4,7 @@
  * token 有效期2天
  * 当token创建超过3小时就更新token并更新创建时间以延长登录持续时间，如果用户每天都登录，就一直不会下线。
  */
+
 namespace ssqz\models;
 
 use Yii;
@@ -62,5 +63,26 @@ class UserPcToken extends UserToken
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];
+    }
+
+    static public function findOneByUserId($userId)
+    {
+        $model = UserPcToken::findOne(['user_id' => $userId]);
+        return $model;
+    }
+
+    static public function createUpdateToken($userId, $token)
+    {
+        $model = UserPcToken::findOneByUserId($userId);
+        if (!$model) {
+            $model = new UserPcToken();
+        }
+        $model->user_id = $userId;
+        $model->token = $token;
+        if (!$model->save()) {
+            Yii::info("Error TokenModel Save:" . json_encode($model->getErrors()), __METHOD__);
+            return false;
+        }
+        return $model->token;
     }
 }
