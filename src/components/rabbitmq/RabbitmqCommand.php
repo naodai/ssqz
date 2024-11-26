@@ -1,14 +1,21 @@
 <?php
-namespace Naodai\Ssqz\Components\Rabbitmq;
+/**
+ * 重写Rabbitmq Command
+ * 支持指定exchange queue
+ */
+namespace ssqz\components\rabbitmq;
 
 class RabbitmqCommand extends \yii\queue\amqp_interop\Command
 {
-    public function actionListen($queueName = 'default', $exchangeName = 'default')
+    /**
+     * @param $channelName
+     * @return void
+     */
+    public function actionListen($channelName = 'default')
     {
         $queue = $this->queue;
-        $queue->queueName = $queueName;
-        $queue->exchangeName = $exchangeName;
+        $queue->exchangeName = $channelName;
+        $queue->queueName = $channelName;
         parent::actionListen();
     }
-
 }
