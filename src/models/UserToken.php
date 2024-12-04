@@ -3,17 +3,15 @@
 namespace ssqz\models;
 
 use Yii;
-use yii\base\Exception;
 use yii\filters\auth\HttpBearerAuth;
-use yii\web\UnauthorizedHttpException;
 
 class UserToken extends \yii\db\ActiveRecord
 {
     //设置连接符
-    static private $_needle = '_';
+//    static private $_needle = Yii::$app->params['userToken']['needle'];
 
     //设置AES秘钥
-    private static $aes_key = 'bUYJ3nTV6VBasdJF'; //此处填写前后端共同约定的秘钥
+//    private static $aes_key = Yii::$app->params['userToken']['aesKey']; //此处填写前后端共同约定的秘钥
 
     /**
      * @param $token
@@ -23,13 +21,7 @@ class UserToken extends \yii\db\ActiveRecord
      */
     public static function validateToken($token, $refresh = true)
     {
-        $tokens = UserToken::getTokenInfo($token);
-
-        if (!$tokens) {
-            Yii::info("Error Tokens:" . $tokens, __METHOD__);
-            return false;
-        }
-        $userId = $tokens['userId'];
+        $userId = UserToken::getUserIdByToken($token);
         if (!$userId) {
             Yii::warning("Error UserId:" . $userId, __METHOD__);
             return false;
@@ -54,23 +46,57 @@ class UserToken extends \yii\db\ActiveRecord
         }
         $time = time();
         $timeCha = $time - $tokenModel->updated_at;
-        var_dump($time);
-        var_dump($timeCha);
         if ($timeCha > 2 * 24 * 60 * 60) {
-            Yii::warning("Error Time99:" . $time." ".$tokenModel->updated_at." ".$timeCha, __METHOD__);
+            Yii::warning("Error Time99:" . $time . " " . $tokenModel->updated_at . " " . $timeCha, __METHOD__);
 
             //throw new Exception("Token Expired",403);
             return false;
         }
         //更新
         if ($refresh !== false) {
-            Yii::info("Refresh Token UserId:".$userId, __METHOD__);
+            Yii::info("Refresh Token UserId:" . $userId, __METHOD__);
 //            if ($timeCha > 3 * 60 * 60) {
-                Yii::info($userId, __METHOD__);
-                self::generateToken();
+            Yii::info($userId, __METHOD__);
+            self::generateToken();
 //            }
         }
         return $userId;
+    }
+
+    /**
+     * @param $token
+     * @return array|false
+     */
+    public static function getUserIdByToken($token)
+    {
+        if (strpos($token, Yii::$app->params['userToken']['needle']) === false) {
+            Yii::warning("Error Token " . Yii::$app->params['userToken']['needle'] . ":" . $token, __METHOD__);
+            return false;
+        }
+        $num = strpos($token, Yii::$app->params['userToken']['needle']);
+        $userIdEncrypt = substr($token, 0, $num);
+        return self::getDecrypt($userIdEncrypt);
+    }
+
+    /**
+     * @param $encrypt
+     * @return string
+     */
+    public static function getDecrypt($encrypt)
+    {
+        return self::decrypt($encrypt);
+    }
+
+    /**
+     * 解密
+     * @param string $str 要解密的数据
+     * @return string        解密后的数据
+     */
+    static public function decrypt($str)
+    {
+
+        $decrypted = openssl_decrypt(base64_decode($str), 'AES-128-ECB', Yii::$app->params['userToken']['aesKey'], OPENSSL_RAW_DATA);
+        return $decrypted;
     }
 
     /**
@@ -80,12 +106,12 @@ class UserToken extends \yii\db\ActiveRecord
     public static function generateToken()
     {
         $userId = Yii::$app->user->id;
-        $token = self::generateTokenPrefix($userId) . self::$_needle . Yii::$app->security->generateRandomString();
+        $token = self::generateTokenPrefix($userId) . Yii::$app->params['userToken']['needle'] . Yii::$app->security->generateRandomString();
         $client = Yii::$app->request->get('client');
         $result = false;
         switch ($client) {
             case "pc":
-                $result = UserPcToken::createUpdateToken($userId,$token);
+                $result = UserPcToken::createUpdateToken($userId, $token);
                 break;
             default:
                 Yii::info("Error Client:" . $client, __METHOD__);
@@ -102,6 +128,29 @@ class UserToken extends \yii\db\ActiveRecord
     }
 
     /**
+     * @param $userId
+     * @return bool|string
+     */
+    public static function generateTokenPrefix($userId)
+    {
+        return self::encrypt($userId);
+    }
+
+    /**
+     * 加密
+     * @param string $str 要加密的数据
+     * @return bool|string   加密后的数据
+     */
+    static public function encrypt($str)
+    {
+
+        $data = openssl_encrypt($str, 'AES-128-ECB', Yii::$app->params['userToken']['aesKey'], OPENSSL_RAW_DATA);
+        $data = base64_encode($data);
+
+        return $data;
+    }
+
+    /**
      * @return false|string
      */
     public static function getHeaderToken()
@@ -113,69 +162,5 @@ class UserToken extends \yii\db\ActiveRecord
             return $authHeader;
         }
         return false;
-    }
-
-    /**
-     * @param $token
-     * @return array|false
-     */
-    public static function getTokenInfo($token)
-    {
-        if (strpos($token, self::$_needle) === false) {
-            Yii::warning("Error Token ".self::$_needle.":" . $token, __METHOD__);
-            return false;
-        }
-        $num = strpos($token, self::$_needle);
-        $userIdEncrypt = substr($token, 0, $num);
-        $userId = self::getDecrypt($userIdEncrypt);
-        $token = substr($token, $num + 1);
-        return [
-            'userId' => $userId,
-            'token' => $token
-        ];
-    }
-
-    /**
-     * @param $userId
-     * @return bool|string
-     */
-    public static function generateTokenPrefix($userId)
-    {
-        return self::encrypt($userId);
-    }
-
-    /**
-     * @param $encrypt
-     * @return string
-     */
-    public static function getDecrypt($encrypt)
-    {
-        return self::decrypt($encrypt);
-    }
-
-    /**
-     * 加密
-     * @param string $str 要加密的数据
-     * @return bool|string   加密后的数据
-     */
-    static public function encrypt($str)
-    {
-
-        $data = openssl_encrypt($str, 'AES-128-ECB', self::$aes_key, OPENSSL_RAW_DATA);
-        $data = base64_encode($data);
-
-        return $data;
-    }
-
-    /**
-     * 解密
-     * @param string $str 要解密的数据
-     * @return string        解密后的数据
-     */
-    static public function decrypt($str)
-    {
-
-        $decrypted = openssl_decrypt(base64_decode($str), 'AES-128-ECB', self::$aes_key, OPENSSL_RAW_DATA);
-        return $decrypted;
     }
 }
