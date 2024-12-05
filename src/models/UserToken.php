@@ -143,7 +143,6 @@ class UserToken extends \yii\db\ActiveRecord
      */
     static public function encrypt($str)
     {
-
         $data = openssl_encrypt($str, 'AES-128-ECB', Yii::$app->params['userToken']['aesKey'], OPENSSL_RAW_DATA);
         $data = base64_encode($data);
 
@@ -156,10 +155,9 @@ class UserToken extends \yii\db\ActiveRecord
     public static function getHeaderToken()
     {
         $auth = new HttpBearerAuth();
-        $authHeader = Yii::$app->request->getHeaders()->get($auth->header);
+        $authHeader = Yii::$app->request->getHeaders()->get($auth->header,'');
         if (preg_match($auth->pattern, $authHeader, $matches)) {
-            $authHeader = $matches[1];
-            return $authHeader;
+            return $matches[1];
         }
         return false;
     }
