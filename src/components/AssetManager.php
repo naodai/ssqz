@@ -39,7 +39,7 @@ class AssetManager extends \yii\web\AssetManager
         $this->baseUrl = rtrim(Yii::getAlias($this->baseUrl), '/');
 
         $this->hashCallback = function ($path) {
-            return sprintf('%08x', crc32($path));
+            return  Yii::$app->id."/".sprintf('%08x', crc32($path));
 //            return Yii::$app->id."/".date('Y').'/'.date('md').'/'.sprintf('%08x', crc32($path));
         };
     }
