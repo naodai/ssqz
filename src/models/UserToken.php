@@ -19,7 +19,7 @@ class UserToken extends \yii\db\ActiveRecord
      * @return false|mixed
      * @throws \yii\base\Exception
      */
-    public static function validateToken($token, $refresh = true)
+    public static function validateToken($token, $refresh = null)
     {
         $userId = UserToken::getUserIdByToken($token);
         if (!$userId) {
@@ -52,6 +52,7 @@ class UserToken extends \yii\db\ActiveRecord
             //throw new Exception("Token Expired",403);
             return false;
         }
+        /*
         //更新
         if ($refresh !== false) {
             Yii::info("Refresh Token UserId:" . $userId, __METHOD__);
@@ -59,8 +60,40 @@ class UserToken extends \yii\db\ActiveRecord
             Yii::info($userId, __METHOD__);
             self::generateToken();
 //            }
-        }
+        }*/
         return $userId;
+    }
+
+    public static function refreshToken($userId)
+    {
+        $tokenModel = null;
+        $client = Yii::$app->request->get('client');
+        switch ($client) {
+            case "pc":
+                $tokenModel = UserPcToken::findOneByUserId($userId);
+                break;
+            default:
+                Yii::warning("Error Client:" . $client, __METHOD__);
+                return false;
+        }
+        if (!$tokenModel) {
+            Yii::warning("Error TokenModel:" . $tokenModel, __METHOD__);
+            return false;
+        }
+
+//        $time = time();
+//        $timeCha = $time - $tokenModel->updated_at;
+//        if ($timeCha > 2 * 24 * 60 * 60) {
+//            Yii::warning("Error Time99:" . $time . " " . $tokenModel->updated_at . " " . $timeCha, __METHOD__);
+//
+//            //throw new Exception("Token Expired",403);
+//            return false;
+//        }
+        //更新
+        Yii::info("Refresh Token UserId:" . $userId, __METHOD__);
+        Yii::info($userId, __METHOD__);
+        $newToken = self::generateToken();
+        return $newToken;
     }
 
     /**
