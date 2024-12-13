@@ -4,11 +4,14 @@ namespace ssqz\controllers;
 
 use xihrni\yii2\behaviors\SignatureBehavior;
 use Yii;
+use yii\filters\auth\CompositeAuth;
+use yii\filters\auth\HttpBearerAuth;
+use yii\filters\auth\QueryParamAuth;
 use yii\helpers\ArrayHelper;
 use yii\rest\Controller;
 use yii\web\Response;
 
-class BaseController extends Controller
+class MustLoginedBaseController extends Controller
 {
     /**
      * {@inheritdoc}
@@ -17,9 +20,30 @@ class BaseController extends Controller
     {
         $behaviors = parent::behaviors();
 
-        //接口签名
-        $behaviors['signature'] = [
-            'class' => SignatureBehavior::className(),
+        //接口授权
+        $behaviors['authenticator'] = [
+            'class' => CompositeAuth::className(),
+            'authMethods' => [
+                //     HttpBasicAuth::className(),
+                HttpBearerAuth::className(),
+                QueryParamAuth::className(),
+            ],
+            'optional' => [
+                'phone-password-login',
+                'send-phone-code',
+                'phone-code-login',
+                'captcha',
+            ]
+        ];
+
+        $behaviors['contentNegotiator']['formats']['text/html'] = Response::FORMAT_JSON;
+
+        return $behaviors;
+    }
+
+    public function beforeAction($action)
+    {
+        $config = [
             //开关，开发环境可以设置false，不进行签名校验
             'switchOn' => Yii::$app->params['signature']['switchOn'],
             //过滤
@@ -29,15 +53,12 @@ class BaseController extends Controller
             //客户端密钥集合
             'clientSecrets' => Yii::$app->params['signature']['clientSecrets'],
         ];
+        $signature = new SignatureBehavior($config);
+        if ($signature->beforeAction($action)) {
+            return parent::beforeAction($action);
+        }
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
-
-        $behaviors['contentNegotiator']['formats']['text/html'] = Response::FORMAT_JSON;
-
-        return $behaviors;
-    }
-
-    public function beforeAction($action)
-    {
         $this->enableCsrfValidation = false;
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
 
