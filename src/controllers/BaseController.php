@@ -55,7 +55,7 @@ class BaseController extends Controller
                     if ($port) {
                         $url .= ":{$port}";
                     }
-                    $headers = 'Origin, X-Requested-With, Content-Type,Token,Timestamp, ' . join(', ', array_keys(Yii::$app->request->headers->toArray()));
+                    $headers = 'Origin, X-Requested-With, Content-Type,Token,Timestamp,Authorization, ' . join(', ', array_keys(Yii::$app->request->headers->toArray()));
                     $header = Yii::$app->response->headers;
                     $header->add('Access-Control-Allow-Origin', $url);
                     $header->add('Access-Control-Allow-Headers', $headers);
