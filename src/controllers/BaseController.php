@@ -15,6 +15,7 @@ class BaseController extends Controller
      */
     public function behaviors()
     {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $behaviors = parent::behaviors();
 
         //接口签名
