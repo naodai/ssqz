@@ -29,6 +29,14 @@ class Service
             'origin' => \Yii::$app->id,
             'referer' => 'server',
         ];
+        // cli命令行模式
+        if(\Yii::$app->request->isConsoleRequest) {
+            $apiParams = [
+                'client' => 'console',
+                'origin' => \Yii::$app->id,
+                'referer' => 'console-server',
+            ];
+        }
         $signData = $apiParams;
         if ($method == 'GET') {
             $signData = array_merge($data, $apiParams);
