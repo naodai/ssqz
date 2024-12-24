@@ -24,17 +24,18 @@ class Service
         }
         $client->setHeaders(['Content-Type' => 'application/json']);
 
-        $apiParams = [
-            'client' => \Yii::$app->request->get('client', 'pc'),
-            'origin' => \Yii::$app->id,
-            'referer' => 'server',
-        ];
         // cli命令行模式
         if(\Yii::$app->request->isConsoleRequest) {
             $apiParams = [
                 'client' => 'console',
                 'origin' => \Yii::$app->id,
                 'referer' => 'console-server',
+            ];
+        } else {
+            $apiParams = [
+                'client' => \Yii::$app->request->get('client', 'pc'),
+                'origin' => \Yii::$app->id,
+                'referer' => 'server',
             ];
         }
         $signData = $apiParams;
