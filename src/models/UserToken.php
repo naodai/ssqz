@@ -45,7 +45,7 @@ class UserToken extends \yii\db\ActiveRecord
             return false;
         }
         $time = time();
-        $timeCha = $time - $tokenModel->updated_at;
+        $timeCha = $time - strtotime($tokenModel->updated_at);
         if ($timeCha > 2 * 24 * 60 * 60) {
             Yii::warning("Error Time99:" . $time . " " . $tokenModel->updated_at . " " . $timeCha, __METHOD__);
 
