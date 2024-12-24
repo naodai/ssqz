@@ -8,10 +8,10 @@ use yii\filters\auth\HttpBearerAuth;
 class UserToken extends \yii\db\ActiveRecord
 {
     //设置连接符
-//    static private $_needle = Yii::$app->params['userToken']['needle'];
+    //static private $_needle = Yii::$app->params['userToken']['needle'];
 
     //设置AES秘钥
-//    private static $aes_key = Yii::$app->params['userToken']['aesKey']; //此处填写前后端共同约定的秘钥
+    //private static $aes_key = Yii::$app->params['userToken']['aesKey']; //此处填写前后端共同约定的秘钥
 
     /**
      * @param $token
@@ -64,38 +64,6 @@ class UserToken extends \yii\db\ActiveRecord
         return $userId;
     }
 
-    public static function refreshToken($userId)
-    {
-        $tokenModel = null;
-        $client = Yii::$app->request->get('client');
-        switch ($client) {
-            case "pc":
-                $tokenModel = UserPcToken::findOneByUserId($userId);
-                break;
-            default:
-                Yii::warning("Error Client:" . $client, __METHOD__);
-                return false;
-        }
-        if (!$tokenModel) {
-            Yii::warning("Error TokenModel:" . $tokenModel, __METHOD__);
-            return false;
-        }
-
-//        $time = time();
-//        $timeCha = $time - $tokenModel->updated_at;
-//        if ($timeCha > 2 * 24 * 60 * 60) {
-//            Yii::warning("Error Time99:" . $time . " " . $tokenModel->updated_at . " " . $timeCha, __METHOD__);
-//
-//            //throw new Exception("Token Expired",403);
-//            return false;
-//        }
-        //更新
-        Yii::info("Refresh Token UserId:" . $userId, __METHOD__);
-        Yii::info($userId, __METHOD__);
-        $newToken = self::generateToken();
-        return $newToken;
-    }
-
     /**
      * @param $token
      * @return array|false
@@ -130,6 +98,38 @@ class UserToken extends \yii\db\ActiveRecord
 
         $decrypted = openssl_decrypt(base64_decode($str), 'AES-128-ECB', Yii::$app->params['userToken']['aesKey'], OPENSSL_RAW_DATA);
         return $decrypted;
+    }
+
+    public static function refreshToken($userId)
+    {
+        $tokenModel = null;
+        $client = Yii::$app->request->get('client');
+        switch ($client) {
+            case "pc":
+                $tokenModel = UserPcToken::findOneByUserId($userId);
+                break;
+            default:
+                Yii::warning("Error Client:" . $client, __METHOD__);
+                return false;
+        }
+        if (!$tokenModel) {
+            Yii::warning("Error TokenModel:" . $tokenModel, __METHOD__);
+            return false;
+        }
+
+//        $time = time();
+//        $timeCha = $time - $tokenModel->updated_at;
+//        if ($timeCha > 2 * 24 * 60 * 60) {
+//            Yii::warning("Error Time99:" . $time . " " . $tokenModel->updated_at . " " . $timeCha, __METHOD__);
+//
+//            //throw new Exception("Token Expired",403);
+//            return false;
+//        }
+        //更新
+        Yii::info("Refresh Token UserId:" . $userId, __METHOD__);
+        Yii::info($userId, __METHOD__);
+        $newToken = self::generateToken();
+        return $newToken;
     }
 
     /**
@@ -188,7 +188,7 @@ class UserToken extends \yii\db\ActiveRecord
     public static function getHeaderToken()
     {
         $auth = new HttpBearerAuth();
-        $authHeader = Yii::$app->request->getHeaders()->get($auth->header,'');
+        $authHeader = Yii::$app->request->getHeaders()->get($auth->header, '');
         if (preg_match($auth->pattern, $authHeader, $matches)) {
             return $matches[1];
         }

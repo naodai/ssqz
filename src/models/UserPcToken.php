@@ -9,6 +9,7 @@ namespace ssqz\models;
 
 use Yii;
 use yii\behaviors\TimestampBehavior;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "{{%user_pc_token}}".
@@ -34,7 +35,18 @@ class UserPcToken extends UserToken
     public function behaviors()
     {
         return [
-            TimestampBehavior::class,
+            [
+                'class' => TimestampBehavior::className(),
+                'attributes' => [
+                    ActiveRecord::EVENT_BEFORE_INSERT => ['created_at', 'updated_at'],
+                    ActiveRecord::EVENT_BEFORE_UPDATE => ['updated_at'],
+                ],
+                // if you're using datetime instead of UNIX timestamp:
+                // 'value' => new Expression('NOW()'),
+                'value' => function ($event) {
+                    return date('Y-m-d H:i:s');
+                }
+            ],
         ];
     }
 
