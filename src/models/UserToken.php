@@ -150,7 +150,7 @@ class UserToken extends \yii\db\ActiveRecord
                 $result = UserPcToken::createUpdateToken($userId, $token);
                 break;
             case "wx":
-                $tokenModel = UserWxToken::createUpdateToken($userId, $token);
+                $result = UserWxToken::createUpdateToken($userId, $token);
                 break;
             default:
                 Yii::info("Error Client:" . $client, __METHOD__);
