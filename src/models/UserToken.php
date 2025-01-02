@@ -32,6 +32,9 @@ class UserToken extends \yii\db\ActiveRecord
             case "pc":
                 $tokenModel = UserPcToken::findOneByUserId($userId);
                 break;
+            case "wx":
+                $tokenModel = UserWxToken::findOneByUserId($userId);
+                break;
             default:
                 Yii::warning("Error Client:" . $client, __METHOD__);
                 return false;
